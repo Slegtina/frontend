@@ -19,7 +19,7 @@ import {
   svg,
   TemplateResult,
 } from "lit";
-import { customElement, property, query, state } from "lit/decorators";
+import { customElement, property, state, query } from "lit/decorators";
 import { classMap } from "lit/directives/class-map";
 import { UNIT_F } from "../../../common/const";
 import { applyThemesOnElement } from "../../../common/dom/apply_themes_on_element";
@@ -124,18 +124,17 @@ export class HuiThermostatCard extends LitElement implements LovelaceCard {
 
     const slider =
       stateObj.state === UNAVAILABLE
-        ? html` <round-slider disabled="true"></round-slider> `
+        ? html` <input type="range" disabled="true" /> `
         : html`
-            <round-slider
+            <input
+              type="range"
               .value=${targetTemp}
-              .low=${stateObj.attributes.target_temp_low}
-              .high=${stateObj.attributes.target_temp_high}
               .min=${stateObj.attributes.min_temp}
               .max=${stateObj.attributes.max_temp}
               .step=${this._stepSize}
-              @value-changing=${this._dragEvent}
-              @value-changed=${this._setTemperature}
-            ></round-slider>
+              @input=${this._dragEvent}
+              @change=${this._setTemperature}
+            />
           `;
 
     const currentTemperature = svg`
@@ -255,10 +254,10 @@ export class HuiThermostatCard extends LitElement implements LovelaceCard {
         <div class="content">
           <div id="controls">
             <div id="slider">
-              ${slider}
               <div id="slider-center">
                 <div id="temperature">${currentTemperature} ${setValues}</div>
               </div>
+              ${slider}
             </div>
           </div>
           <div id="info" .title=${name}>
@@ -382,38 +381,14 @@ export class HuiThermostatCard extends LitElement implements LovelaceCard {
   }
 
   private _dragEvent(e): void {
-    const stateObj = this.hass!.states[this._config!.entity] as ClimateEntity;
-
-    if (e.detail.low) {
-      this._setTemp = [e.detail.low, stateObj.attributes.target_temp_high];
-    } else if (e.detail.high) {
-      this._setTemp = [stateObj.attributes.target_temp_low, e.detail.high];
-    } else {
-      this._setTemp = e.detail.value;
-    }
+    this._setTemp = e.target.valueAsNumber;
   }
 
   private _setTemperature(e): void {
-    const stateObj = this.hass!.states[this._config!.entity] as ClimateEntity;
-
-    if (e.detail.low) {
-      this.hass!.callService("climate", "set_temperature", {
-        entity_id: this._config!.entity,
-        target_temp_low: e.detail.low,
-        target_temp_high: stateObj.attributes.target_temp_high,
-      });
-    } else if (e.detail.high) {
-      this.hass!.callService("climate", "set_temperature", {
-        entity_id: this._config!.entity,
-        target_temp_low: stateObj.attributes.target_temp_low,
-        target_temp_high: e.detail.high,
-      });
-    } else {
-      this.hass!.callService("climate", "set_temperature", {
-        entity_id: this._config!.entity,
-        temperature: e.detail.value,
-      });
-    }
+    this.hass!.callService("climate", "set_temperature", {
+      entity_id: this._config!.entity,
+      temperature: e.target.valueAsNumber,
+    });
   }
 
   private _renderIcon(mode: string, currentMode: string): TemplateResult {
@@ -524,20 +499,20 @@ export class HuiThermostatCard extends LitElement implements LovelaceCard {
         min-width: 100px;
       }
 
-      round-slider {
-        --round-slider-path-color: var(--slider-track-color);
-        --round-slider-bar-color: var(--mode-color);
-        padding-bottom: 10%;
+      input[type="range"] {
+        width: 100%;
+        padding-bottom: 30%;
+        padding-top: 30%;
       }
 
       #slider-center {
         position: absolute;
-        width: calc(100% - 40px);
-        height: calc(100% - 40px);
+        width: 100%;
+        height: 100%;
         box-sizing: border-box;
         border-radius: 100%;
-        left: 20px;
-        top: 20px;
+        left: 0px;
+        top: 0px;
         text-align: center;
         overflow-wrap: break-word;
         pointer-events: none;
@@ -545,11 +520,10 @@ export class HuiThermostatCard extends LitElement implements LovelaceCard {
 
       #temperature {
         position: absolute;
-        transform: translate(-50%, -50%);
         width: 100%;
         height: 50%;
-        top: 45%;
-        left: 50%;
+        top: 0%;
+        left: 0%;
       }
 
       #set-values {
